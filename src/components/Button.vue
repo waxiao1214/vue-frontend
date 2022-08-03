@@ -32,10 +32,10 @@ export default {
     background: linear-gradient(#80808080, white);
   }
   .secondary {
-    background: linear-gradient(#FFFFFF10 10%, red 95%);
+    background: linear-gradient(#80808020, #ad0202 90%);
     color: white
   }
   .secondary:hover {
-    background: linear-gradient(red , #FFFFFF10 95%);
+    background: linear-gradient(#80808020, #ad0202 70%);
   }
 </style>

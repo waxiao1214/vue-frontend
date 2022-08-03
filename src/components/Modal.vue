@@ -1,41 +1,53 @@
 <template>
-  <div v-if="isOpen" class="modal">
+  <div class="modal">
     <div class="modal-content">
       <div class="header">
         <p>{{ currentClient ? "Edit Client": "New Client" }}</p>
       </div>
-      <div class="modal-content-body">
-        <InputBox name="name" label="Name" v-bind:value="name" @change="handleChange" />
-        <InputBox name="email" label="Email" v-bind:value="email" @change="handleChange" />
-        <InputBox name="phone_number" label="Phone" v-bind:value="phone_number" @change="handleChange" />
-        <div class="flex">
-          <InputBox name="providerName" label="Providers" v-bind:value="providerName" @change="handleChange">
-            <div class="provider-box">
-              <div v-for="(provider, index) in providers" :key="index">
-                <div class="provider-item">
-                  <input type="checkbox" @change="(selectProviders($event, provider))">
-                  <p>{{ provider.name }}</p>	
-                  <i class="fa fa-pencil-square-o"></i>
-                  <i class="fa fa-trash-o" @click="removeProvider(provider._id)"></i>
+        <form @submit.prevent="">
+      <div v-if="loaded" class="modal-content-body">
+          <InputBox type="text" name="name" label="Name" :value="name" v-on:input="handleChange" />
+          <InputBox type="email" name="email" label="Email" :value="email" v-on:input="handleChange" />
+          <InputBox type="number" name="phone_number" label="Phone" :value="phone_number" v-on:input="handleChange" />
+          <div class="flex">
+            <InputBox name="providerName" label="Providers" :value="providerName" v-on:input="handleChange">
+              <div class="provider-box">
+                <div v-for="(provider, index) in providers" :key="index">
+                  <div class="provider-item">
+                    <input type="checkbox" :checked="provider.checked" @change="(selectProviders($event, provider))">
+                    <p>{{ provider.name }}</p>	
+                    <i class="fa fa-pencil-square-o"></i>
+                    <i class="fa fa-trash-o" @click="removeProvider(provider._id)"></i>
+                  </div>
                 </div>
               </div>
+            </InputBox>
+            <div class="provider-button">
+              <Button variation="primary" @on-click="addProvider">
+                Add Provider
+              </Button>
             </div>
-          </InputBox>
-          <div class="provider-button">
-            <Button variation="primary" @on-click="addProvider">
-              Add Provider
-            </Button>
           </div>
-        </div>
+          <div class="footer">
+            <div>
+              <Button v-if="currentClient" variation="secondary" @click="removeClient">
+                Delete Client
+              </Button>
+            </div>
+            <div class="flex">
+              <Button variation="primary" @click="closeModal">
+                Cancel
+              </Button>
+              <Button type="submit" v-if="!currentClient" variation="primary" @click="addClient">
+                Add Client
+              </Button>
+              <Button type="submit" v-else variation="primary" @click="updateClient">
+                Edit Client
+              </Button>
+            </div>
+          </div>
       </div>
-      <div class="footer">
-        <Button variation="primary" @click="closeModal">
-          Cancel
-        </Button>
-        <Button variation="primary" @click="addClient">
-          Add Client
-        </Button>
-      </div>
+        </form>
     </div>
   </div>
 </template>
@@ -57,37 +69,60 @@ export default {
       email: '',
       name: '',
       phone_number: '',
-      currentProviders: []
+      currentProviders: [],
+      loaded: false,
     }
   },
   computed: {
     ...mapState({
       isOpen: (state) => state.showPopup,
-      providers: (state) => state.providers,
-      currentClient: (state) => state.currentClient
+      providers: (state) => state.providers.map(provider => {
+        const currentProviders = state.currentClient ? [...state.currentClient.providers] : []
+        return {...provider, checked: currentProviders.indexOf(provider._id) > -1 ? true : false}
+      }
+      ),
+      currentClient: (state) => state.currentClient,
     })
+  },
+  created() {
+    this.email = this.currentClient ? this.currentClient.email: ''
+    this.name = this.currentClient ? this.currentClient.name: ''
+    this.phone_number = this.currentClient ? this.currentClient.phone_number: ''
+    this.currentProviders = this.currentClient ? [...this.currentClient.providers]: []
+    this.loaded = true
   },
   methods: {
     removeProvider(id) {
       store.dispatch('removeProvider', id)
     },
     addProvider() {
+      if(this.providerName === '') {
+        store.dispatch('setAlert', {type: 'ERROR', text: 'Please input Provider name'})
+        return
+      }
       const data = {
         name: this.providerName
       }
       store.dispatch('addProvider', data);
+      this.providerName = ''
     },
     handleChange(event) {
       if(event && event.target) this[event.target.name] = event.target.value;
     },
     selectProviders(event, provider) {
+      const providerIds = this.providers.map(provider => provider._id);
+
       if(event && event.target) {
         event.target.checked ?
           this.currentProviders.push(provider._id) :
-          this.currentProviders.splice(this.providers.indexOf(provider._id), 1)
+          this.currentProviders.splice(providerIds.indexOf(provider._id), 1)
       }
     },
     addClient() {
+      if(!this.currentProviders || !this.email || !this.name || !this.phone_number ) {
+        store.dispatch('setAlert', {type: 'ERROR', text: 'Some fields is missing!'})
+        return
+      }
       let data = {
         providers: this.currentProviders,
         email: this.email,
@@ -98,6 +133,22 @@ export default {
     },
     closeModal() {
       store.dispatch('togglePopup', false)
+    },
+    updateClient() {
+      const data = {
+        body: {
+          providers: this.currentProviders,
+          email: this.email,
+          name: this.name,
+          phone_number: this.phone_number
+        },
+        id: this.currentClient._id
+      }
+      store.dispatch('updateClient', data)
+    },
+    removeClient() {
+      const id = this.currentClient._id;
+      store.dispatch('removeClient', id)
     }
   }
 }
@@ -168,8 +219,8 @@ export default {
     cursor: pointer;
   }
   input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
   .provider-button {
     margin-top: 6px;
@@ -177,7 +228,7 @@ export default {
   .footer {
     display: flex;
     gap: 20px;
-    justify-content: end;
+    justify-content: space-between;
     padding: 16px;
     border-top: solid 1px lightgray;
     margin-top: 20px;

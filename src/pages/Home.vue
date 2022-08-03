@@ -7,7 +7,12 @@
       </Button>
     </header>
     <Table></Table>
+  </div>
+  <div v-if="showPopup">
     <Modal/>
+  </div>
+  <div v-if="showAlert">
+    <Notification />
   </div>
 </template>
 <script>
@@ -16,6 +21,7 @@ import store from '../store'
 import Table from '../components/Table.vue';
 import Button from '../components/Button.vue';
 import Modal from '../components/Modal.vue';
+import Notification from '../components/Notification.vue';
 
 export default {
   name: 'Home',
@@ -23,6 +29,7 @@ export default {
     Table,
     Button,
     Modal,
+    Notification
 },
   created() {
     store.dispatch('getClients');
@@ -30,12 +37,13 @@ export default {
   },
   computed: {
     ...mapState({
-      showPopup: (state) => state.showPopup
+      showPopup: (state) => state.showPopup,
+      showAlert: (state) => state.showAlert,
     })
   },
   methods: {
     openPopup() {
-      store.dispatch('togglePopup', !this.showPopup)
+      store.dispatch('editClient', null)
     }
   }
 }
